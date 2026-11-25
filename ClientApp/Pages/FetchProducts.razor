@@ -1,0 +1,95 @@
+@page "/fetchproducts"
+@inject HttpClient Http
+
+@using System.Text.Json
+
+<h3>InventoryHub Product List</h3>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <p style="color:red">@errorMessage</p>
+}
+else if (products == null)
+{
+    <p>Loading products...</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Stock</th>
+                <th>Category</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var product in products)
+            {
+                <tr>
+                    <td>@product.Name</td>
+                    <td>$@product.Price</td>
+                    <td>@product.Stock</td>
+                    <td>@product.Category.Name</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+
+    private Product[]? products;
+    private string? errorMessage;
+
+    // Copilot helped generate the initial API
+    // integration code and exception handling.
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Prevent duplicate API calls.
+        if (products != null)
+            return;
+
+        try
+        {
+            var response =
+                await Http.GetAsync("/api/productlist");
+
+            response.EnsureSuccessStatusCode();
+
+            var json =
+                await response.Content.ReadAsStringAsync();
+
+            products =
+                JsonSerializer.Deserialize<Product[]>(
+                    json,
+                    new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+            if (products == null)
+            {
+                errorMessage =
+                    "Invalid product data returned.";
+            }
+        }
+        catch (JsonException)
+        {
+            errorMessage =
+                "Malformed JSON received from API.";
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage =
+                $"API Error: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            errorMessage =
+                $"Unexpected Error: {ex.Message}";
+        }
+    }
+}
